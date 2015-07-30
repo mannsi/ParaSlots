@@ -1,8 +1,10 @@
+from Para_calculations import Logic, MALE, FEMALE
+
 __author__ = 'mannsi'
 
 import unittest
 import datetime
-from Para_calculations import Logic
+#from Para_calculations import *
 
 
 event_list_csv_header = "Event Code,Gender,Event,Rank,SDMS ID,Family Name,Given Name,NPC,Birth,Result,Time (ms),Date,City,Country"
@@ -14,9 +16,9 @@ class TestParaLogic(unittest.TestCase):
         """ Single race, only males, everybody should be included """
         min_requirement_csv = min_requirement_csv_header + "50m Freestyle S3,MALE,01:00.00"
         event_list_csv = event_list_csv_header \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:29.33") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:30.18")
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:29.33") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:30.18")
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id=None, npc_max_number_of_males=2,
                       npc_max_number_of_females=0, total_number_of_males=3, total_number_of_females=0)
@@ -32,13 +34,13 @@ class TestParaLogic(unittest.TestCase):
                                  50m Freestyle S4,FEMALE,01:59.50"""
 
         event_list_csv = event_list_csv_header \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:29.33") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:30.18") \
-            + "/n" + self._create_event_line(event_id="E1", gender="F", rank="4", event="50m Freestyle S4", sdms="40", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="F", rank="5", event="50m Freestyle S4", sdms="50", npc="GRE", time="00:29.33") \
-            + "/n" + self._create_event_line(event_id="E1", gender="F", rank="6", event="50m Freestyle S4", sdms="60", npc="GRE", time="01:30.00") \
-            + "/n" + self._create_event_line(event_id="E1", gender="F", rank="7", event="50m Freestyle S4", sdms="70", npc="ICE", time="02:00.00") # This one should be eliminated
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:29.33") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:30.18") \
+            + "/n" + self._create_event_line(event_id="E1", gender=FEMALE, rank="4", event="50m Freestyle S4", sdms="40", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=FEMALE, rank="5", event="50m Freestyle S4", sdms="50", npc="GRE", time="00:29.33") \
+            + "/n" + self._create_event_line(event_id="E1", gender=FEMALE, rank="6", event="50m Freestyle S4", sdms="60", npc="GRE", time="01:30.00") \
+            + "/n" + self._create_event_line(event_id="E1", gender=FEMALE, rank="7", event="50m Freestyle S4", sdms="70", npc="ICE", time="02:00.00") # This one should be eliminated
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id=None, npc_max_number_of_males=2,
                       npc_max_number_of_females=2, total_number_of_males=3, total_number_of_females=3)
@@ -55,13 +57,13 @@ class TestParaLogic(unittest.TestCase):
         min_requirement_csv = min_requirement_csv_header + "50m Freestyle S3,MALE,01:00.00"
 
         event_list_csv = event_list_csv_header \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="3", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E2", gender="M", rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E3", gender="M", rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E4", gender="M", rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E5", gender="M", rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="3", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E2", gender=MALE, rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E3", gender=MALE, rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E4", gender=MALE, rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E5", gender=MALE, rank="1", event="50m Freestyle S3", sdms="40", npc="GRE", time="00:06.10") \
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id=None, npc_max_number_of_males=3,
                       npc_max_number_of_females=0, total_number_of_males=5, total_number_of_females=0)
@@ -76,12 +78,12 @@ class TestParaLogic(unittest.TestCase):
         min_requirement_csv = min_requirement_csv_header + "50m Freestyle S3,MALE,01:00.00"
 
         event_list_csv = event_list_csv_header \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E2", gender="M", rank="1", event="50m Freestyle S3", sdms="40", npc="ASD", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E2", gender="M", rank="2", event="50m Freestyle S3", sdms="50", npc="JKL", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E2", gender="M", rank="3", event="50m Freestyle S3", sdms="60", npc="QWE", time="00:06.10")
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E2", gender=MALE, rank="1", event="50m Freestyle S3", sdms="40", npc="ASD", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E2", gender=MALE, rank="2", event="50m Freestyle S3", sdms="50", npc="JKL", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E2", gender=MALE, rank="3", event="50m Freestyle S3", sdms="60", npc="QWE", time="00:06.10")
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id='SWMF5001010001',
                       npc_max_number_of_males=100, npc_max_number_of_females=0, total_number_of_males=100,
@@ -100,9 +102,9 @@ class TestParaLogic(unittest.TestCase):
         min_requirement_csv = min_requirement_csv_header + "50m Freestyle S3,MALE,01:00.00"
 
         event_list_csv = event_list_csv_header \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
-            + "/n" + self._create_event_line(event_id="E1", gender="M", rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:06.10")
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="10", npc="UKR", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="2", event="50m Freestyle S3", sdms="20", npc="GRE", time="00:06.10") \
+            + "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="3", event="50m Freestyle S3", sdms="30", npc="GRE", time="00:06.10")
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id=None, npc_max_number_of_males=1,
                       npc_max_number_of_females=0, total_number_of_males=3, total_number_of_females=0)
@@ -118,25 +120,25 @@ class TestParaLogic(unittest.TestCase):
         event_list_csv = event_list_csv_header
 
         for i in range(29):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="A" + str(i), npc="A", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="A" + str(i), npc="A", time="00:06.10")
 
         for i in range(20):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="B" + str(i), npc="B", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="B" + str(i), npc="B", time="00:06.10")
 
         for i in range(17):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="C" + str(i), npc="C", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="C" + str(i), npc="C", time="00:06.10")
 
         for i in range(13):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="D" + str(i), npc="D", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="D" + str(i), npc="D", time="00:06.10")
 
         for i in range(9):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="E" + str(i), npc="E", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="E" + str(i), npc="E", time="00:06.10")
 
         for i in range(7):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="F" + str(i), npc="F", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="F" + str(i), npc="F", time="00:06.10")
 
         for i in range(5):
-            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender="M", rank="1", event="50m Freestyle S3", sdms="G" + str(i), npc="G", time="00:06.10")
+            event_list_csv += "/n" + self._create_event_line(event_id="E1", gender=MALE, rank="1", event="50m Freestyle S3", sdms="G" + str(i), npc="G", time="00:06.10")
 
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_id=None, npc_max_number_of_males=3,
                       npc_max_number_of_females=0, total_number_of_males=10, total_number_of_females=0)
