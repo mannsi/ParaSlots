@@ -32,13 +32,14 @@ class Logic():
 
         self._clean_csv_files()
         self._load_csv_files()
+        self.world_champion_event_results = self._handle_world_champion_event()
         self._attach_minimum_requirements()
         self._remove_unqualified_results()
-        self.world_champion_event_results = self._handle_world_champion_event()
 
     def calculate_npc_numbers(self, gender):
         swimmers_and_weights = self.event_result_list.get_list_of_swimmers_and_max_weight()
         total_weight = Logic._get_weight_sum(swimmers_and_weights, gender)
+
         npcs = self.event_result_list.get_unique_npcs()
         npc_max_slots = self.npc_max_slots[gender]
 
@@ -46,29 +47,36 @@ class Logic():
             raise Exception("Error, no NPCS found")
 
         for npc in npcs:
+            num_npc_swimmers = sum([1 for x in swimmers_and_weights if x[0].gender == gender and x[0].npc == npc])
             npc_weight_sum = sum([x[1] for x in swimmers_and_weights if x[0].gender == gender and x[0].npc == npc])
             npc_world_champion_slots = sum(
-                [x for x in self.world_champion_event_results if x.gender == gender and x.rank <= 2])
+                [1 for x in self.world_champion_event_results
+                 if x.swimmer.gender == gender and x.swimmer.npc == npc and x.rank <= 2])
             total_slots = self.total_number_of_slots[gender]
-            weight_ratio = npc_weight_sum / total_weight
+            weight_ratio = 0
+            if total_weight > 0:
+                weight_ratio = npc_weight_sum / total_weight
             npc_total_slots = total_slots * weight_ratio + npc_world_champion_slots
+            if npc_total_slots > num_npc_swimmers:
+                npc_total_slots = num_npc_swimmers
 
-            if npc_total_slots < npc_max_slots:
+            if npc_total_slots <= int(npc_max_slots):
                 rounded_value = npc_total_slots - int(npc_total_slots)
                 self.npcs_rounded_results[gender][npc] = rounded_value
-                self.npcs_non_capped_results[gender][npc] = npc_total_slots
+                self.npcs_non_capped_results[gender][npc] = int(npc_total_slots)
 
-            elif npc_total_slots >= npc_max_slots:
+            elif npc_total_slots > npc_max_slots:
                 self.npcs_rounded_results[gender].clear()
                 self.npcs_non_capped_results[gender].clear()
                 self.npcs_capped_results[gender][npc] = npc_max_slots
+                self.event_result_list.remove_entire_npc()
                 self.calculate_npc_numbers(gender)
 
         self._add_rounded_slots(gender)
 
         final_results = self.npcs_non_capped_results[gender].copy()
         final_results.update(self.npcs_capped_results[gender])
-        return list(final_results.items())
+        return [(x[0], gender, x[1]) for x in final_results.items()]
 
     def _add_rounded_slots(self, gender):
         num_non_capped_slots = sum([result for result in self.npcs_non_capped_results[gender].values()])
@@ -79,11 +87,12 @@ class Logic():
 
         sorted_rounded_npc_list = self._get_sorted_rounded_list(gender)
         for i in range(num_rounding_slots):
-            npc = sorted_rounded_npc_list.pop(0)
-            # Skip over npcs that already have maximum number of slots
-            while self.npcs_non_capped_results[gender][npc] == self.npc_max_slots[gender]:
+            if len(sorted_rounded_npc_list) > 0:
                 npc = sorted_rounded_npc_list.pop(0)
-            self.npcs_non_capped_results[gender][npc] += 1
+                # Skip over npcs that already have maximum number of slots
+                while self.npcs_non_capped_results[gender][npc] == self.npc_max_slots[gender]:
+                    npc = sorted_rounded_npc_list.pop(0)
+                self.npcs_non_capped_results[gender][npc] += 1
 
     def _get_sorted_rounded_list(self, gender):
         # Convert dict to tuple list, sort tuple list and return list of npcs
@@ -140,7 +149,7 @@ class EventResult():
                  event_country):
         self.event_code = event_code
         self.event = event
-        self.swimmer_rank = swimmer_rank
+        self.rank = int(swimmer_rank)
         self.swimmer = swimmer
         self.result_time = result_time
         self.result_time_ms = self._time_to_ms(result_time)
@@ -158,13 +167,13 @@ class EventResult():
         self.minimum_requirement_time_ms = EventResult._time_to_ms(min_requirement_time)
 
     def _set_weight(self):
-        if 1 <= self.swimmer_rank <= 8:
+        if 1 <= self.rank <= 8:
             self.weight = 1
-        elif 9 <= self.swimmer_rank <= 12:
+        elif 9 <= self.rank <= 12:
             self.weight = 0.8
-        elif 13 <= self.swimmer_rank <= 16:
+        elif 13 <= self.rank <= 16:
             self.weight = 0.6
-        elif 17 <= self.swimmer_rank:
+        elif 17 <= self.rank:
             self.weight = 0.5
 
     @staticmethod
@@ -184,6 +193,9 @@ class EventResultList():
         self.csv_file_content = csv_file_content
         self.event_results = []
 
+    def remove_entire_npc(self):
+
+
     def get_list_of_swimmers_and_max_weight(self):
         """
         Return a list of swimmers and their maximum weight as tuples
@@ -202,16 +214,18 @@ class EventResultList():
     def get_single_event(self, event_code):
         return [x for x in self.event_results if x.event_code == event_code]
 
-    def remove_single_event(self, event_code):
-        self.event_results = [x for x in self.event_results if x.event_code != event_code]
+    def remove_single_event_weights(self, event_code):
+        for result in self.event_results:
+            if result.event_code == event_code:
+                result.weight = 0
 
     def load_csv_file(self):
         header_line_found = False
 
-        for line in self.csv_file_content:
+        for line in self.csv_file_content.splitlines():
             if header_line_found:
                 self._add_csv_line(line)
-            elif line.startswith("Event Code, Gender"):
+            elif line.startswith("Event Code,Gender"):
                 header_line_found = True
 
     def _add_csv_line(self, line):
@@ -220,35 +234,41 @@ class EventResultList():
         if len(split_line) != 14:
             raise Exception("Illegal event result csv line: '" + line + "'")
 
-        swimmer = Swimmer(swimmer_id=split_line[4],
-                          family_name=split_line[5],
-                          given_name=split_line[6],
-                          gender=split_line[1],
-                          birth_year=split_line[8],
-                          npc=split_line[7])
+        swimmer = Swimmer(swimmer_id=split_line[4].strip(),
+                          family_name=split_line[5].strip(),
+                          given_name=split_line[6].strip(),
+                          gender=split_line[1].strip(),
+                          birth_year=split_line[8].strip(),
+                          npc=split_line[7].strip())
 
         event_result = EventResult(
-            event_code=split_line[0],
+            event_code=split_line[0].strip(),
             swimmer=swimmer,
-            event=split_line[2],
-            swimmer_rank=split_line[3],
-            result_time=split_line[9],
-            event_date=split_line[11],
-            event_city=split_line[12],
-            event_country=split_line[13]
+            event=split_line[2].strip(),
+            swimmer_rank=split_line[3].strip(),
+            result_time=split_line[9].strip(),
+            event_date=split_line[11].strip(),
+            event_city=split_line[12].strip(),
+            event_country=split_line[13].strip()
         )
         self.event_results.append(event_result)
 
     def attach_minimum_requirements(self, minimum_requirement_list):
         for event_result in self.event_results:
             min_requirement = minimum_requirement_list.get_min_requirement(event_result.event)
+
+            if not min_requirement:
+                raise Exception("No minimum requirement found for event result: " + event_result.event)
+
             event_result.set_min_requirement_time(min_requirement.mqs)
 
-    def remove_unqualified_results(self):
-        self.event_results = [x for x in self.event_results if x.result_time_ms < x.minimum_requirement_time_ms]
+    def nullify_unqualified_results(self):
+        for result in self.event_results:
+            if result.result_time_ms > result.minimum_requirement_time_ms:
+                result.weight = 0
 
     def get_unique_npcs(self):
-        return list(set([x.npc for x in self.event_results]))  # Set is used to remove duplicates
+        return list(set([x.swimmer.npc for x in self.event_results]))  # Set is used to remove duplicates
 
 
 class MinimumRequirement():
@@ -266,7 +286,7 @@ class MinimumRequirementList():
     def load_csv_file(self):
         header_line_found = False
 
-        for line in self.csv_file_content:
+        for line in self.csv_file_content.splitlines():
             if header_line_found:
                 self._add_csv_line(line)
             elif line.startswith('Event,Gender'):
@@ -283,7 +303,7 @@ class MinimumRequirementList():
         if len(split_line) != 3:
             raise Exception("Illegal min requirement csv line: '" + line + "'")
 
-        min_requirement = MinimumRequirement(event=split_line[0],
-                                             gender=split_line[1],
-                                             mqs=split_line[2])
+        min_requirement = MinimumRequirement(event=split_line[0].strip(),
+                                             gender=split_line[1].strip(),
+                                             mqs=split_line[2].strip())
         self.min_requirements.append(min_requirement)
