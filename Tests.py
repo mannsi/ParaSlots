@@ -23,13 +23,12 @@ class TestParaLogic(unittest.TestCase):
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_code=None, npc_max_number_of_males=2,
                       npc_max_number_of_females=0, total_number_of_males=3, total_number_of_females=0)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
-        self.assertIn(('UKR', MALE, 1), list_of_npcs_and_swimmers, msg="Ukraine should have a single male swimmer")
-        self.assertIn(('UKR', FEMALE, 0), list_of_npcs_and_swimmers, msg="Ukraine should have no female swimmer")
-        self.assertIn(('GRE', MALE, 2), list_of_npcs_and_swimmers, msg="Greece should have two male swimmers")
-        self.assertIn(('GRE', FEMALE, 0), list_of_npcs_and_swimmers, msg="Greece should have no female swimmers")
-        self.assertEqual(4, len(list_of_npcs_and_swimmers), msg="2 entries for each npc")
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
+        self.assertIn(('UKR', MALE, 1), list_of_npcs_and_swimmers)
+        self.assertIn(('UKR', FEMALE, 0), list_of_npcs_and_swimmers)
+        self.assertIn(('GRE', MALE, 2), list_of_npcs_and_swimmers)
+        self.assertIn(('GRE', FEMALE, 0), list_of_npcs_and_swimmers)
+        self.assertEqual(4, len(list_of_npcs_and_swimmers))
 
     def test_male_and_female(self):
         """ Test when there are both male and female swimmers. Also test if min req time can eliminate a swimmer """
@@ -48,8 +47,7 @@ class TestParaLogic(unittest.TestCase):
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_code=None, npc_max_number_of_males=2,
                       npc_max_number_of_females=2, total_number_of_males=3, total_number_of_females=3)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         self.assertIn(('UKR', MALE, 1), list_of_npcs_and_swimmers)
         self.assertIn(('UKR', FEMALE, 1), list_of_npcs_and_swimmers)
         self.assertIn(('GRE', MALE, 2), list_of_npcs_and_swimmers)
@@ -74,8 +72,7 @@ class TestParaLogic(unittest.TestCase):
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_code=None, npc_max_number_of_males=3,
                       npc_max_number_of_females=0, total_number_of_males=3, total_number_of_females=0)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
 
         self.assertIn(('UKR', MALE, 1), list_of_npcs_and_swimmers)
         self.assertIn(('GRE', MALE, 2), list_of_npcs_and_swimmers)
@@ -99,13 +96,12 @@ class TestParaLogic(unittest.TestCase):
                       npc_max_number_of_males=100, npc_max_number_of_females=0, total_number_of_males=5,
                       total_number_of_females=0)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         self.assertIn(('UKR', MALE, 1), list_of_npcs_and_swimmers)
         self.assertIn(('GRE', MALE, 2), list_of_npcs_and_swimmers)
-        self.assertIn(('ASD', MALE, 1), list_of_npcs_and_swimmers, msg="ASD should place from WC 1st")
-        self.assertIn(('JKL', MALE, 1), list_of_npcs_and_swimmers, msg="JKL should place from WC 2nd")
-        self.assertIn(('QWE', MALE, 0), list_of_npcs_and_swimmers, msg="3rd place on WC is not enough")
+        self.assertIn(('ASD', MALE, 1), list_of_npcs_and_swimmers)
+        self.assertIn(('JKL', MALE, 1), list_of_npcs_and_swimmers)
+        self.assertIn(('QWE', MALE, 0), list_of_npcs_and_swimmers)
         self.assertEqual(10, len(list_of_npcs_and_swimmers))
 
     def test_npc_cap_reached(self):
@@ -121,8 +117,7 @@ class TestParaLogic(unittest.TestCase):
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_code=None, npc_max_number_of_males=1,
                       npc_max_number_of_females=0, total_number_of_males=3, total_number_of_females=0)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
 
         self.assertIn(('GRE', MALE, 1), list_of_npcs_and_swimmers)
         self.assertIn(('GRE', FEMALE, 0), list_of_npcs_and_swimmers)
@@ -168,9 +163,7 @@ class TestParaLogic(unittest.TestCase):
         logic = Logic(event_list_csv, min_requirement_csv, world_champion_event_code=None, npc_max_number_of_males=3,
                       npc_max_number_of_females=0, total_number_of_males=10, total_number_of_females=0)
 
-        list_of_npcs_and_swimmers = logic.calculate_npc_numbers(MALE)
-        list_of_npcs_and_swimmers.extend(logic.calculate_npc_numbers(FEMALE))
-
+        list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         total_number_of_male_competitors = 0
         for result in list_of_npcs_and_swimmers:
             total_number_of_male_competitors += result[2]
@@ -210,3 +203,7 @@ class TestParaLogic(unittest.TestCase):
         (mins, secs, ms) = time_string.replace(".", ":").split(":")
         return int(
             datetime.timedelta(minutes=int(mins), seconds=int(secs), milliseconds=int(ms)).total_seconds() * 1000)
+
+
+if __name__ == '__main__':
+    unittest.main()

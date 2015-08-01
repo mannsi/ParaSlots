@@ -6,7 +6,7 @@ MALE = "M"
 FEMALE = "F"
 
 
-class Logic():
+class Logic:
     def __init__(self,
                  event_list_csv,
                  min_requirement_csv,
@@ -34,9 +34,16 @@ class Logic():
         self._load_csv_files()
         self.world_champion_event_results = self._handle_world_champion_event()
         self._attach_minimum_requirements()
-        self._remove_unqualified_results()
+        self._nullify_unqualified_results()
+        self._initial_npcs = self.event_result_list.get_unique_npcs()
 
-    def calculate_npc_numbers(self, gender):
+    def calculate_npcs_numbers(self):
+        results = self._calculate_npc_by_gender(MALE)
+        results.extend(self._calculate_npc_by_gender(FEMALE))
+        self._add_empty_npc_results(results)
+        return results
+
+    def _calculate_npc_by_gender(self, gender):
         swimmers_and_weights = self.event_result_list.get_list_of_swimmers_and_max_weight()
         total_weight = Logic._get_weight_sum(swimmers_and_weights, gender)
 
@@ -69,8 +76,8 @@ class Logic():
                 self.npcs_rounded_results[gender].clear()
                 self.npcs_non_capped_results[gender].clear()
                 self.npcs_capped_results[gender][npc] = npc_max_slots
-                self.event_result_list.remove_entire_npc()
-                self.calculate_npc_numbers(gender)
+                self.event_result_list.remove_entire_npc(npc, gender)
+                self._calculate_npc_by_gender(gender)
 
         self._add_rounded_slots(gender)
 
@@ -102,7 +109,7 @@ class Logic():
 
     def _handle_world_champion_event(self):
         world_champion_event_results = self.event_result_list.get_single_event(self.world_champion_event_code)
-        self.event_result_list.remove_single_event(self.world_champion_event_code)
+        self.event_result_list.remove_single_event_weights(self.world_champion_event_code)
         return world_champion_event_results
 
     @staticmethod
@@ -123,11 +130,25 @@ class Logic():
     def _attach_minimum_requirements(self):
         self.event_result_list.attach_minimum_requirements(self.min_requirement_list)
 
-    def _remove_unqualified_results(self):
-        self.event_result_list.remove_unqualified_results()
+    def _nullify_unqualified_results(self):
+        self.event_result_list.nullify_unqualified_results()
+
+    def _add_empty_npc_results(self, result_list):
+        for npc in self._initial_npcs:
+            male_found = False
+            female_found = False
+            for result in result_list:
+                if result[0] == npc and result[1] == MALE:
+                    male_found = True
+                if result[0] == npc and result[1] == FEMALE:
+                    female_found = True
+            if not male_found:
+                result_list.append((npc, MALE, 0))
+            if not female_found:
+                result_list.append((npc, FEMALE, 0))
 
 
-class Swimmer():
+class Swimmer:
     def __init__(self, swimmer_id, family_name, given_name, gender, birth_year, npc):
         self.id = swimmer_id
         self.family_name = family_name
@@ -137,7 +158,7 @@ class Swimmer():
         self.npc = npc
 
 
-class EventResult():
+class EventResult:
     def __init__(self,
                  event_code,
                  event,
@@ -188,13 +209,14 @@ class EventResult():
             datetime.timedelta(minutes=int(mins), seconds=int(secs), milliseconds=int(ms)).total_seconds() * 1000)
 
 
-class EventResultList():
+class EventResultList:
     def __init__(self, csv_file_content):
         self.csv_file_content = csv_file_content
         self.event_results = []
 
-    def remove_entire_npc(self):
-
+    def remove_entire_npc(self, npc, gender):
+        others = [x for x in self.event_results if x.swimmer.npc != npc or x.swimmer.gender != gender]
+        self.event_results = others
 
     def get_list_of_swimmers_and_max_weight(self):
         """
@@ -271,14 +293,14 @@ class EventResultList():
         return list(set([x.swimmer.npc for x in self.event_results]))  # Set is used to remove duplicates
 
 
-class MinimumRequirement():
+class MinimumRequirement:
     def __init__(self, event, gender, mqs):
         self.event = event
         self.gender = gender
         self.mqs = mqs
 
 
-class MinimumRequirementList():
+class MinimumRequirementList:
     def __init__(self, csv_file_content):
         self.csv_file_content = csv_file_content
         self.min_requirements = []
