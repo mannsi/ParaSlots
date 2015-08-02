@@ -1,6 +1,7 @@
 __author__ = 'mannsi'
 
 import datetime
+import logging
 
 MALE = "M"
 FEMALE = "F"
@@ -23,25 +24,30 @@ class Logic:
         self.min_requirement_list = MinimumRequirementList(min_requirement_csv)
 
         # Holds all npc swimmers who exceeded the max number of slots
-        self.npcs_capped_results = {MALE: {}, FEMALE: {}}  # {gender: {npcs: slots}}
-        self.npcs_non_capped_results = {MALE: {}, FEMALE: {}}  # {MALE: {npc: npc_slots}}
+        self.npcs_capped_results = {MALE: {}, FEMALE: {}}  # {gender: {npc: Slots}}
+        self.npcs_non_capped_results = {MALE: {}, FEMALE: {}}  # {gender: {npc: Slots}}
 
         # Holds extra rounding values when npcs are assigned swimmers. Used when all
         # npcs have gotten their slots but due to rounding some slots remain.
         self.npcs_rounded_results = {MALE: {}, FEMALE: {}}  # {gender: {npc: rounded_value}}
 
+        self._initialize_logging()
+        logging.info("Starting Para Slots process")
         self._clean_csv_files()
         self._load_csv_files()
-        self.world_champion_event_results = self._handle_world_champion_event()
+        self._handle_world_champion_event()
         self._attach_minimum_requirements()
         self._nullify_unqualified_results()
         self._initial_npcs = self.event_result_list.get_unique_npcs()
+        self._final_results = [] #  list of Slot objects
 
     def calculate_npcs_numbers(self):
-        results = self._calculate_npc_by_gender(MALE)
-        results.extend(self._calculate_npc_by_gender(FEMALE))
-        self._add_empty_npc_results(results)
-        return results
+        logging.info("Calculating npc male slots")
+        self._calculate_npc_by_gender(MALE)
+        logging.info("Calculating npc female slots")
+        self._calculate_npc_by_gender(FEMALE)
+        self._add_empty_npc_results()
+        return self._final_results
 
     def _calculate_npc_by_gender(self, gender):
         swimmers_and_weights = self.event_result_list.get_list_of_swimmers_and_max_weight()
@@ -51,43 +57,56 @@ class Logic:
         npc_max_slots = self.npc_max_slots[gender]
 
         if len(npcs) == 0:
-            raise Exception("Error, no NPCS found")
+            raise Exception("Error, no NPC found")
 
         for npc in npcs:
             num_npc_swimmers = sum([1 for x in swimmers_and_weights if x[0].gender == gender and x[0].npc == npc])
             npc_weight_sum = sum([x[1] for x in swimmers_and_weights if x[0].gender == gender and x[0].npc == npc])
             npc_world_champion_slots = sum(
-                [1 for x in self.world_champion_event_results
+                [1 for x in self._world_champion_event_results
                  if x.swimmer.gender == gender and x.swimmer.npc == npc and x.rank <= 2])
             total_slots = self.total_number_of_slots[gender]
             weight_ratio = 0
             if total_weight > 0:
                 weight_ratio = npc_weight_sum / total_weight
             npc_total_slots = total_slots * weight_ratio + npc_world_champion_slots
+
+            slots = Slots(npc, gender, weight_percentage=npc_total_slots, wc_slots=npc_world_champion_slots)
+
             if npc_total_slots > num_npc_swimmers:
                 npc_total_slots = num_npc_swimmers
 
             if npc_total_slots <= int(npc_max_slots):
                 rounded_value = npc_total_slots - int(npc_total_slots)
                 self.npcs_rounded_results[gender][npc] = rounded_value
-                self.npcs_non_capped_results[gender][npc] = int(npc_total_slots)
+                slots.calculated_slots = int(npc_total_slots) - npc_world_champion_slots
+                self.npcs_non_capped_results[gender][npc] = slots
+                logging.info("- %s. %d slots. Ratio %.2f", npc, int(npc_total_slots), npc_total_slots)
 
             elif npc_total_slots > npc_max_slots:
                 self.npcs_rounded_results[gender].clear()
                 self.npcs_non_capped_results[gender].clear()
-                self.npcs_capped_results[gender][npc] = npc_max_slots
+
+                slots.calculated_slots = npc_max_slots - npc_world_champion_slots
+                slots.capped = True
+                self.npcs_capped_results[gender][npc] = slots
                 self.event_result_list.remove_entire_npc(npc, gender)
+                logging.info("- %s. %d slots. Ratio %.2f. CAPPED", npc, npc_max_slots, npc_total_slots)
+                logging.info("  - Due to being capped all non-capped calculations will be repeated")
                 self._calculate_npc_by_gender(gender)
+                return
 
         self._add_rounded_slots(gender)
 
-        final_results = self.npcs_non_capped_results[gender].copy()
-        final_results.update(self.npcs_capped_results[gender])
-        return [(x[0], gender, x[1]) for x in final_results.items()]
+        results = self.npcs_non_capped_results[gender].copy()
+        results.update(self.npcs_capped_results[gender])
+
+        self._final_results += ([x[1] for x in results.items()])
 
     def _add_rounded_slots(self, gender):
-        num_non_capped_slots = sum([result for result in self.npcs_non_capped_results[gender].values()])
-        num_capped_slots = sum([capped_result for capped_result in self.npcs_capped_results[gender].values()])
+        num_non_capped_slots = sum([result.total_slots() for result in self.npcs_non_capped_results[gender].values()])
+        num_capped_slots = sum(
+            [capped_result.total_slots() for capped_result in self.npcs_capped_results[gender].values()])
         num_assigned_slots = num_non_capped_slots + num_capped_slots
 
         num_rounding_slots = self.total_number_of_slots[gender] - num_assigned_slots
@@ -99,7 +118,7 @@ class Logic:
                 # Skip over npcs that already have maximum number of slots
                 while self.npcs_non_capped_results[gender][npc] == self.npc_max_slots[gender]:
                     npc = sorted_rounded_npc_list.pop(0)
-                self.npcs_non_capped_results[gender][npc] += 1
+                self.npcs_non_capped_results[gender][npc].calculated_slots += 1
 
     def _get_sorted_rounded_list(self, gender):
         # Convert dict to tuple list, sort tuple list and return list of npcs
@@ -108,9 +127,11 @@ class Logic:
         return [x[0] for x in sorted_tuple_list]
 
     def _handle_world_champion_event(self):
-        world_champion_event_results = self.event_result_list.get_single_event(self.world_champion_event_code)
-        self.event_result_list.remove_single_event_weights(self.world_champion_event_code)
-        return world_champion_event_results
+        logging.info("Handle WC event (nullify 1/2 place swimmers since they already get slots for that placing)")
+        self._world_champion_event_results = self.event_result_list.get_single_event(self.world_champion_event_code)
+        for wc_result in self._world_champion_event_results:
+            if wc_result.rank <= 2:
+                self.event_result_list.nullify_swimmer(wc_result.swimmer.id)
 
     @staticmethod
     def _get_weight_sum(swimmers_and_weights, gender):
@@ -133,19 +154,23 @@ class Logic:
     def _nullify_unqualified_results(self):
         self.event_result_list.nullify_unqualified_results()
 
-    def _add_empty_npc_results(self, result_list):
+    def _add_empty_npc_results(self):
         for npc in self._initial_npcs:
             male_found = False
             female_found = False
-            for result in result_list:
-                if result[0] == npc and result[1] == MALE:
+            for result in self._final_results:
+                if result.npc == npc and result.gender == MALE:
                     male_found = True
-                if result[0] == npc and result[1] == FEMALE:
+                if result.npc == npc and result.gender == FEMALE:
                     female_found = True
             if not male_found:
-                result_list.append((npc, MALE, 0))
+                self._final_results.append(Slots(npc, MALE, 0, 0))
             if not female_found:
-                result_list.append((npc, FEMALE, 0))
+                self._final_results.append(Slots(npc, FEMALE, 0, 0))
+
+    @staticmethod
+    def _initialize_logging():
+        logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
 
 class Swimmer:
@@ -236,12 +261,8 @@ class EventResultList:
     def get_single_event(self, event_code):
         return [x for x in self.event_results if x.event_code == event_code]
 
-    def remove_single_event_weights(self, event_code):
-        for result in self.event_results:
-            if result.event_code == event_code:
-                result.weight = 0
-
     def load_csv_file(self):
+        logging.info("Loading event line csv lines")
         header_line_found = False
 
         for line in self.csv_file_content.splitlines():
@@ -249,6 +270,7 @@ class EventResultList:
                 self._add_csv_line(line)
             elif line.startswith("Event Code,Gender"):
                 header_line_found = True
+        logging.info("=> %d event lines loaded" % len(self.event_results))
 
     def _add_csv_line(self, line):
         split_line = line.split(',')
@@ -285,12 +307,21 @@ class EventResultList:
             event_result.set_min_requirement_time(min_requirement.mqs)
 
     def nullify_unqualified_results(self):
+        logging.info("Nullifying event result lines with times below msq times")
+        counter = 0
         for result in self.event_results:
             if result.result_time_ms > result.minimum_requirement_time_ms:
                 result.weight = 0
+                counter += 1
+        logging.info("=> %d lines nullified" % counter)
 
     def get_unique_npcs(self):
-        return list(set([x.swimmer.npc for x in self.event_results]))  # Set is used to remove duplicates
+        return sorted(list(set([x.swimmer.npc for x in self.event_results])))  # Set is used to remove duplicates
+
+    def nullify_swimmer(self, swimmer_id):
+        for result in self.event_results:
+            if result.swimmer.id == swimmer_id:
+                result.weight = 0
 
 
 class MinimumRequirement:
@@ -306,6 +337,7 @@ class MinimumRequirementList:
         self.min_requirements = []
 
     def load_csv_file(self):
+        logging.info("Loading minimum requirements csv lines")
         header_line_found = False
 
         for line in self.csv_file_content.splitlines():
@@ -313,6 +345,7 @@ class MinimumRequirementList:
                 self._add_csv_line(line)
             elif line.startswith('Event,Gender'):
                 header_line_found = True
+        logging.info("=> %d minimum requirement lines loaded" % len(self.min_requirements))
 
     def get_min_requirement(self, event):
         for min_requirement in self.min_requirements:
@@ -329,3 +362,16 @@ class MinimumRequirementList:
                                              gender=split_line[1].strip(),
                                              mqs=split_line[2].strip())
         self.min_requirements.append(min_requirement)
+
+
+class Slots:
+    def __init__(self, npc, gender, weight_percentage, wc_slots, capped=False):
+        self.npc = npc
+        self.gender = gender
+        self.weight_percentage = weight_percentage
+        self.wc_slots = wc_slots
+        self.calculated_slots = 0
+        self.capped = capped
+
+    def total_slots(self):
+        return self.wc_slots + self.calculated_slots
