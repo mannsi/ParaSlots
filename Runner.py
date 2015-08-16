@@ -57,13 +57,22 @@ def main():
 
     results = logic.calculate_npcs_numbers()
 
-    for result in results:
-        print("%s, %s, %d" % (result.npc, result.gender, result.total_slots()))
+    unique_npc = sorted(set([x.npc for x in results]))
 
-    male_results = [x for x in results if x.gender == MALE]
-    print("Total male slots: ", sum(x.total_slots() for x in male_results))
-    female_results = [x for x in results if x.gender == FEMALE]
-    print("Total female slots: ", sum(x.total_slots() for x in female_results))
+    print("")
+    print("FINAL RESULTS")
+    for npc in unique_npc:
+        num_npc_males = sum([x.total_slots() for x in results if x.npc == npc and x.gender == MALE])
+        num_npc_females = sum([x.total_slots() for x in results if x.npc == npc and x.gender == FEMALE])
+        print("%s: (M: %d, F: %d)" % (npc, num_npc_males, num_npc_females))
+
+    # for result in results:
+    #     print("%s, %s, %d" % (result.npc, result.gender, result.total_slots()))
+    #
+    # male_results = [x for x in results if x.gender == MALE]
+    # print("Total male slots: ", sum(x.total_slots() for x in male_results))
+    # female_results = [x for x in results if x.gender == FEMALE]
+    # print("Total female slots: ", sum(x.total_slots() for x in female_results))
 
 
 if __name__ == "__main__":
