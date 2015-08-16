@@ -31,10 +31,8 @@ class TestParaLogic(unittest.TestCase):
 
         list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         self._assert_result_in('UKR', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('UKR', FEMALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
-        self._assert_result_in('GRE', FEMALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(4, len(list_of_npcs_and_swimmers))
+        self.assertEqual(2, len(list_of_npcs_and_swimmers))
 
     def test_male_and_female(self):
         """ Test when there are both male and female swimmers. Also test if min req time can eliminate a swimmer """
@@ -66,9 +64,8 @@ class TestParaLogic(unittest.TestCase):
         self._assert_result_in('UKR', FEMALE, 1, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', FEMALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('ICE', MALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('ICE', FEMALE, 1, list_of_npcs_and_swimmers)
-        self.assertEqual(6, len(list_of_npcs_and_swimmers))
+        self.assertEqual(5, len(list_of_npcs_and_swimmers))
 
     def test_swimmers_with_multiple_results(self):
         """ Swimmers with multiple results should not be counted multiple times. """
@@ -98,9 +95,7 @@ class TestParaLogic(unittest.TestCase):
 
         self._assert_result_in('UKR', MALE, 1, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
-        self._assert_result_in('UKR', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('GRE', FEMALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(4, len(list_of_npcs_and_swimmers))
+        self.assertEqual(2, len(list_of_npcs_and_swimmers))
 
     def test_world_champion_event_removed(self):
         """ Test removing world champion event """
@@ -129,8 +124,6 @@ class TestParaLogic(unittest.TestCase):
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
         self._assert_result_in('ASD', MALE, 1, list_of_npcs_and_swimmers)
         self._assert_result_in('JKL', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('QWE', MALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(10, len(list_of_npcs_and_swimmers))
 
     def test_npc_cap_reached(self):
         """ Test when an npcs should receive more swimmers than the npc cap """
@@ -153,12 +146,9 @@ class TestParaLogic(unittest.TestCase):
         list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
 
         self._assert_result_in('GRE', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('GRE', FEMALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('UKR', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('UKR', FEMALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('ICE', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('ICE', FEMALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(6, len(list_of_npcs_and_swimmers))
+        self.assertEqual(3, len(list_of_npcs_and_swimmers))
 
     def test_rounding_of_seats(self):
         """ Test when there is rounding in the number of seats for swimmers """
@@ -215,15 +205,7 @@ class TestParaLogic(unittest.TestCase):
         self._assert_result_in('F', MALE, 1, list_of_npcs_and_swimmers)
         self._assert_result_in('G', MALE, 0, list_of_npcs_and_swimmers)
 
-        self._assert_result_in('A', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('B', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('C', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('D', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('E', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('F', FEMALE, 0, list_of_npcs_and_swimmers)
-        self._assert_result_in('G', FEMALE, 0, list_of_npcs_and_swimmers)
-
-        self.assertEqual(14, len(list_of_npcs_and_swimmers))
+        self.assertEqual(7, len(list_of_npcs_and_swimmers))
 
     def test_empty_event_files(self):
         """ Testing empty event files with and without header """
@@ -263,10 +245,8 @@ class TestParaLogic(unittest.TestCase):
 
         list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         self._assert_result_in('UKR', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('UKR', FEMALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
-        self._assert_result_in('GRE', FEMALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(4, len(list_of_npcs_and_swimmers))
+        self.assertEqual(2, len(list_of_npcs_and_swimmers))
 
     def test_empty_min_req_file(self):
         """ Same as test_simple_only_males except here there is an empty min requirement file  """
@@ -285,10 +265,8 @@ class TestParaLogic(unittest.TestCase):
 
         list_of_npcs_and_swimmers = logic.calculate_npcs_numbers()
         self._assert_result_in('UKR', MALE, 1, list_of_npcs_and_swimmers)
-        self._assert_result_in('UKR', FEMALE, 0, list_of_npcs_and_swimmers)
         self._assert_result_in('GRE', MALE, 2, list_of_npcs_and_swimmers)
-        self._assert_result_in('GRE', FEMALE, 0, list_of_npcs_and_swimmers)
-        self.assertEqual(4, len(list_of_npcs_and_swimmers))
+        self.assertEqual(2, len(list_of_npcs_and_swimmers))
 
     def _create_simple_event_line(self, sdms, gender, npc, time):
         return self._create_event_line("SWMF5001010000", gender, "50m Freestyle S3", "1", sdms, npc, time)
