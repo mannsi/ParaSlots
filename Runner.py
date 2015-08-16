@@ -1,6 +1,10 @@
 import configparser
 from Para_calculations import Logic, MALE, FEMALE
 
+# TODO handle relays so that Ingi does not have to manual delete them every time
+# TODO print all the rounding results
+# TODO print total weight
+
 
 class ConfigFile:
     def __init__(self):
@@ -66,13 +70,10 @@ def main():
         num_npc_females = sum([x.total_slots() for x in results if x.npc == npc and x.gender == FEMALE])
         print("%s: (M: %d, F: %d)" % (npc, num_npc_males, num_npc_females))
 
-    # for result in results:
-    #     print("%s, %s, %d" % (result.npc, result.gender, result.total_slots()))
-    #
-    # male_results = [x for x in results if x.gender == MALE]
-    # print("Total male slots: ", sum(x.total_slots() for x in male_results))
-    # female_results = [x for x in results if x.gender == FEMALE]
-    # print("Total female slots: ", sum(x.total_slots() for x in female_results))
+    male_results = [x for x in results if x.gender == MALE]
+    print("Total male slots: ", sum(x.total_slots() for x in male_results))
+    female_results = [x for x in results if x.gender == FEMALE]
+    print("Total female slots: ", sum(x.total_slots() for x in female_results))
 
 
 if __name__ == "__main__":

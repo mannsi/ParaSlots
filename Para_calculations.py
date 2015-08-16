@@ -93,8 +93,8 @@ class Logic:
 
                 self._add_non_capped_slot(gender, npc, npc_calculated_slots, npc_total_slots, slots)
             elif npc_total_slots > npc_max_slots:
-                logging.info("- %s. %d slots. Ratio %.4f. CAPPED. Should have gotten %d slots without cap", npc,
-                             npc_max_slots, weight_ratio, npc_total_slots)
+                logging.info("- %s. %d slots. Ratio %.4f. CAPPED. Should have gotten %d (WC:%d, Calculated: %d) slots without cap", npc,
+                             npc_max_slots, weight_ratio, npc_total_slots, npc_world_champ_slots, npc_calculated_slots)
                 logging.info("  - All non-capped calculations will be repeated")
 
                 self._add_capped_slot(gender, npc, npc_max_slots, npc_world_champ_slots, slots)
@@ -154,9 +154,24 @@ class Logic:
         logging.info(
             "Handle WC event (nullify 1/2 place swimmer weights since they already get slots for that placing)")
 
+        world_champion_results = []
+
         for world_champion_event_code in self._world_champion_event_codes:
-            event_competitors = self.event_result_list.get_single_event(world_champion_event_code)
-            self._world_champion_event_results.extend([x for x in event_competitors if x.rank <= 2])
+            #event_competitors = self.event_result_list.get_single_event(world_champion_event_code)
+            world_champion_results.extend(self.event_result_list.get_single_event(world_champion_event_code))
+
+        # Make sure each swimmer is only counted once
+        filtered_for_first_and_second = [x for x in world_champion_results if x.rank <= 2]
+        competitor_ids = set([x.swimmer.id for x in filtered_for_first_and_second])
+        filtered_for_unique_competitors = []
+
+        for competitor_id in competitor_ids:
+            for event_result in filtered_for_first_and_second:
+                if event_result.swimmer.id == competitor_id:
+                    filtered_for_unique_competitors.append(event_result)
+                    break
+
+        self._world_champion_event_results.extend(filtered_for_unique_competitors)
 
         for wc_result in self._world_champion_event_results:
             self.event_result_list.nullify_swimmer(wc_result.swimmer.id)
