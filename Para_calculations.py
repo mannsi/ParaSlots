@@ -7,10 +7,17 @@ MALE = "M"
 FEMALE = "W"
 
 
+# TODO handle relays so that Ingi does not have to manual delete them every time
+# TODO print all the rounding results
+# TODO print total weight
+# TODO fix my misunderstanding of wc event list. FOKK
+# TODO all the event code based logic is fucked
+# TODO think about all the things that I can print out to assist Ingi
+# TODO change to file based outputs
+
 class Logic:
     def __init__(self,
                  event_list_csv_list,
-                 min_requirement_csv_list,
                  world_champion_event_code,
                  npc_max_number_of_males,
                  npc_max_number_of_females,
@@ -38,7 +45,7 @@ class Logic:
         self._initialize_logging()
         logging.info("Starting Para Slots process")
 
-        self._initial_data_setup(event_list_csv_list, min_requirement_csv_list, csv_separator)
+        self._initial_data_setup(event_list_csv_list, csv_separator)
 
     def calculate_npcs_numbers(self):
         logging.info("CALCULATING NPC MALE SLOTS")
@@ -157,7 +164,6 @@ class Logic:
         world_champion_results = []
 
         for world_champion_event_code in self._world_champion_event_codes:
-            #event_competitors = self.event_result_list.get_single_event(world_champion_event_code)
             world_champion_results.extend(self.event_result_list.get_single_event(world_champion_event_code))
 
         # Make sure each swimmer is only counted once
@@ -176,33 +182,14 @@ class Logic:
         for wc_result in self._world_champion_event_results:
             self.event_result_list.nullify_swimmer(wc_result.swimmer.id)
 
-    def _attach_minimum_requirements(self):
-        """ Attach the minimum requirement list to the event list so that the event list can filter """
-        self.event_result_list.attach_minimum_requirements(self.min_requirement_list)
-
-    def _nullify_unqualified_results(self):
-        """ Sets weights to 0 for all unqualified results """
-        self.event_result_list.nullify_unqualified_results()
-
     def _initialize_logging(self):
         logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
-    def _load_csv_files(self, event_list_csv_list, min_requirement_csv_list, csv_separator):
-        """ Load the event list and min requirement files into memory """
+    def _initial_data_setup(self, event_list_csv_list, csv_separator):
+        """ Initialize the csv file, handles the world champion events and calculates remaining slots """
         self.event_result_list = EventResultList(event_list_csv_list, csv_separator)
         self.event_result_list.load_csv_file()
 
-        if min_requirement_csv_list:
-            self.min_requirement_list = MinimumRequirementList(min_requirement_csv_list, csv_separator)
-            self.min_requirement_list.load_csv_file()
-            self._attach_minimum_requirements()
-            self._nullify_unqualified_results()
-        else:
-            logging.info("No minimum requirements document found")
-
-    def _initial_data_setup(self, event_list_csv_list, min_requirement_csv_list, csv_separator):
-        """ Initializes the csv files, handles the world champion events and calculates remaining slots """
-        self._load_csv_files(event_list_csv_list, min_requirement_csv_list, csv_separator)
         self._handle_world_champion_events()
 
         male_wc_competitors = self._get_number_of_wc_competitors(MALE)
@@ -250,7 +237,6 @@ class EventResult:
         self.event_country = event_country
         self.minimum_requirement_time = datetime.timedelta()
         self.qualification = qualification
-        self.minimum_requirement_time_ms = 0
         self.weight = 0
 
         self._set_weight()
@@ -284,10 +270,6 @@ class EventResult:
             event_city=split_line[13].strip(),
             event_country=split_line[14].strip()
         )
-
-    def set_min_requirement_time(self, min_requirement_time):
-        self.minimum_requirement_time = min_requirement_time
-        self.minimum_requirement_time_ms = EventResult._time_to_ms(min_requirement_time)
 
     def _set_weight(self):
         if 1 <= self.rank <= 8:
@@ -330,7 +312,6 @@ class EventResultList:
         others = [x for x in self.event_results if x.swimmer.npc != npc or x.swimmer.gender != gender]
         self.event_results = others
 
-
     def get_list_of_swimmers_and_max_weight(self):
         """
         Return a list of swimmers and their maximum weight as tuples
@@ -367,24 +348,6 @@ class EventResultList:
         if event_result.qualification in ("MQS", ""):
             self.event_results.append(event_result)
 
-    def attach_minimum_requirements(self, minimum_requirement_list):
-        for event_result in self.event_results:
-            min_requirement = minimum_requirement_list.get_min_requirement(event_result.event)
-
-            if not min_requirement:
-                raise Exception("No minimum requirement found for event result: " + event_result.event)
-
-            event_result.set_min_requirement_time(min_requirement.minimum_time)
-
-    def nullify_unqualified_results(self):
-        logging.info("Nullifying event result lines with times below msq times. This means their weights are set to 0")
-        counter = 0
-        for result in self.event_results:
-            if result.result_time_ms > result.minimum_requirement_time_ms:
-                result.weight = 0
-                counter += 1
-        logging.info("=> %d lines nullified" % counter)
-
     def get_unique_npcs(self, gender=None):
         return sorted(list(set([x.swimmer.npc for x in self.event_results
                                 if x.swimmer.gender == gender or gender is None])))  # Set is used to remove duplicates
@@ -393,51 +356,6 @@ class EventResultList:
         for result in self.event_results:
             if result.swimmer.id == swimmer_id:
                 result.weight = 0
-
-
-class MinimumRequirement:
-    def __init__(self, event, gender, minimum_time):
-        self.event = event
-        self.gender = gender
-        self.minimum_time = minimum_time
-
-    @staticmethod
-    def from_csv_line(line, separator):
-        split_line = line.split(separator)
-
-        if len(split_line) != 3:
-            raise Exception("Illegal min requirement csv line: '" + line + "'")
-
-        return MinimumRequirement(event=split_line[0].strip(),
-                                  gender=split_line[1].strip(),
-                                  minimum_time=split_line[2].strip())
-
-
-class MinimumRequirementList:
-    def __init__(self, csv_file_content, csv_separator):
-        self.csv_file_content_lines = csv_file_content
-        self.min_requirements = []
-        self.csv_separator = csv_separator
-
-    def load_csv_file(self):
-        logging.info("Loading minimum requirements csv lines")
-        header_line_found = False
-
-        for line in self.csv_file_content_lines:
-            if header_line_found:
-                self._add_csv_line(line)
-            elif line.startswith('Event,Gender'):
-                header_line_found = True
-        logging.info("=> %d minimum requirement lines loaded" % len(self.min_requirements))
-
-    def get_min_requirement(self, event):
-        for min_requirement in self.min_requirements:
-            if min_requirement.event == event:
-                return min_requirement
-
-    def _add_csv_line(self, line):
-        min_requirement = MinimumRequirement.from_csv_line(line, self.csv_separator)
-        self.min_requirements.append(min_requirement)
 
 
 class Slots:

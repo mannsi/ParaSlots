@@ -1,15 +1,11 @@
 import configparser
 from Para_calculations import Logic, MALE, FEMALE
 
-# TODO handle relays so that Ingi does not have to manual delete them every time
-# TODO print all the rounding results
-# TODO print total weight
-
 
 class ConfigFile:
     def __init__(self):
-        self.events_file_path = ''
-        self.world_champion_event_ids_file_path = ''
+        self.rankings_file = ''
+        self.world_champion_results_file = ''
         self.minimum_requirements_file_path = ''
         self.npc_max_number_of_males = 0
         self.npc_max_number_of_females = 0
@@ -21,9 +17,8 @@ class ConfigFile:
         config = configparser.ConfigParser()
         config.read(config_file_name)
 
-        self.events_file_path = config['FILES']['events_file']
-        self.world_champion_event_ids_file_path = config['FILES']['world_champion_event_ids_file']
-        self.minimum_requirements_file_path = config['FILES']['minimum_requirements_file']
+        self.rankings_file = config['FILES']['rankings_file']
+        self.world_champion_results_file = config['FILES']['world_champion_results_file']
 
         self.npc_max_number_of_males = int(config['PARAMETERS']['npc_max_number_of_males'])
         self.npc_max_number_of_females = int(config['PARAMETERS']['npc_max_number_of_females'])
@@ -36,23 +31,19 @@ def main():
     config_file = ConfigFile()
     config_file.load_config_file('config.ini')
 
-    event_csv_content = []
-    world_champion_event_ids = []
+    rankings_csv_content = []
+    world_champion_results = []
     min_requirement_csv_content = []
 
-    with open(config_file.events_file_path) as event_csv_file:
-        event_csv_content.extend(event_csv_file.readlines())
+    with open(config_file.rankings_file) as rankings_csv_file:
+        rankings_csv_content.extend(rankings_csv_file.readlines())
 
-    with open(config_file.world_champion_event_ids_file_path) as wc_events_file:
-        world_champion_event_ids.extend(wc_events_file.readline().split(','))
+    with open(config_file.world_champion_results_file) as world_champion_results_file:
+        world_champion_results.extend(world_champion_results_file.readline().split(','))
 
-    if config_file.minimum_requirements_file_path:
-        with open(config_file.minimum_requirements_file_path) as min_req_file:
-            min_requirement_csv_content.extend(min_req_file.readlines())
-
-    logic = Logic(event_csv_content,
+    logic = Logic(rankings_csv_content,
                   min_requirement_csv_content,
-                  world_champion_event_ids,
+                  world_champion_results,
                   config_file.npc_max_number_of_males,
                   config_file.npc_max_number_of_females,
                   config_file.total_number_of_males,
