@@ -7,13 +7,8 @@ MALE = "M"
 FEMALE = "W"
 
 
-# TODO handle relays so that Ingi does not have to manual delete them every time
-# TODO print all the rounding results
-# TODO print total weight
-
 # TODO fix my misunderstanding of wc event list. FOKK
 # TODO all the event code based logic is fucked
-# TODO think about all the things that I can print out to assist Ingi
 # TODO change to file based outputs
 
 
@@ -112,15 +107,15 @@ class Logic:
             slots = Slots(npc, gender, weight_percentage=npc_total_slots, wc_slots=npc_world_champ_slots)
 
             if npc_total_slots <= int(npc_max_slots):
-                logging.info("- %s. %d slots (WC:%d, Calculated: %d). Ratio %.4f.",
-                             npc, int(npc_total_slots), npc_world_champ_slots, npc_calculated_slots, weight_ratio)
+                logging.info("- %s. %d slots (WC:%d, Calculated: %d). Ratio %.4f. Total weight: %.4f",
+                             npc, int(npc_total_slots), npc_world_champ_slots, npc_calculated_slots, weight_ratio, total_weight)
 
                 self._add_non_capped_slot(gender, npc, npc_calculated_slots, npc_total_slots, slots)
             elif npc_total_slots > npc_max_slots:
                 logging.info(
-                    "- %s. %d slots. Ratio %.4f. CAPPED. Should have gotten %d (WC:%d, Calculated: %d)  without cap",
+                    "- %s. %d slots. Ratio %.4f. Total weight: %.4f. CAPPED. Should have gotten %d (WC:%d, Calculated: %d)  without cap",
                     npc,
-                    npc_max_slots, weight_ratio, npc_total_slots, npc_world_champ_slots, npc_calculated_slots)
+                    npc_max_slots, weight_ratio, total_weight, npc_total_slots, npc_world_champ_slots, npc_calculated_slots)
                 logging.info("  - All non-capped calculations will be repeated")
 
                 self._add_capped_slot(gender, npc, npc_max_slots, npc_world_champ_slots, slots)
@@ -164,6 +159,11 @@ class Logic:
                 logging.info("%s gets 1 slot for its rounding value %.3f", npc, self._npcs_rounded_results[gender][npc])
 
                 self._npcs_non_capped_results[gender][npc].calculated_slots += 1
+
+        logging.info("NPCs who don't receive a rounding slot (in order)")
+        for npc in sorted_rounded_npc_list:
+            rounding_value = self._npcs_rounded_results[gender][npc]
+            logging.info("-> %s - %.3f rounding value", npc, rounding_value)
 
     def _get_sorted_rounded_list(self, gender):
         """ Returns a list of npc sorted by the highest rounding values """
