@@ -1,5 +1,6 @@
 import configparser
-from Para_calculations import Logic, MALE, FEMALE
+import logging
+from Para_calculations import Logic, RankingsList, WorldChampionResultList, MALE, FEMALE
 
 
 class ConfigFile:
@@ -28,27 +29,28 @@ class ConfigFile:
 
 
 def main():
+    logging.basicConfig(format='%(message)s', level=logging.DEBUG)
+    logging.info("Starting Para Slots process")
+
     config_file = ConfigFile()
     config_file.load_config_file('config.ini')
 
-    rankings_csv_content = []
-    world_champion_results = []
-    min_requirement_csv_content = []
+    rankings_csv_lines = []
+    world_champion_lines = []
 
     with open(config_file.rankings_file) as rankings_csv_file:
-        rankings_csv_content.extend(rankings_csv_file.readlines())
+        rankings_csv_lines.extend(rankings_csv_file.readlines())
 
     with open(config_file.world_champion_results_file) as world_champion_results_file:
-        world_champion_results.extend(world_champion_results_file.readline().split(','))
+        world_champion_lines.extend(world_champion_results_file.readline().split(','))
 
-    logic = Logic(rankings_csv_content,
-                  min_requirement_csv_content,
-                  world_champion_results,
+    logic = Logic(get_ranking_list(rankings_csv_lines, config_file.csv_separator),
+                  get_world_champion_results(world_champion_lines, config_file.csv_separator),
+                  world_champion_lines,
                   config_file.npc_max_number_of_males,
                   config_file.npc_max_number_of_females,
                   config_file.total_number_of_males,
-                  config_file.total_number_of_females,
-                  config_file.csv_separator)
+                  config_file.total_number_of_females,)
 
     results = logic.calculate_npcs_numbers()
 
@@ -66,6 +68,17 @@ def main():
     female_results = [x for x in results if x.gender == FEMALE]
     print("Total female slots: ", sum(x.total_slots() for x in female_results))
 
+
+def get_ranking_list(rankings_lines, csv_separator):
+    rankings_list = RankingsList()
+    rankings_list.load_csv_content(rankings_lines, csv_separator)
+    return rankings_list
+
+
+def get_world_champion_results(world_champion_lines, csv_separator):
+    world_champion_result_list = WorldChampionResultList()
+    world_champion_result_list.load_csv_content(world_champion_lines, csv_separator)
+    return world_champion_result_list
 
 if __name__ == "__main__":
     main()
