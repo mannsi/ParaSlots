@@ -7,9 +7,8 @@ MALE = "M"
 FEMALE = "W"
 
 
-# TODO fix my misunderstanding of wc event list. FOKK
-# TODO all the event code based logic is fucked
-# TODO change to file based outputs
+# TODO create wc_results.csv file
+# TODO review the logic after all these changes
 
 
 def convert_rank(swimmer_rank):
@@ -19,8 +18,6 @@ def convert_rank(swimmer_rank):
         # Filter out non numeric characters
         sanitized_list = [x for x in swimmer_rank if x.isdigit()]
         return int(''.join(sanitized_list))
-
-
 
 
 class Logic:
@@ -113,9 +110,14 @@ class Logic:
                 self._add_non_capped_slot(gender, npc, npc_calculated_slots, npc_total_slots, slots)
             elif npc_total_slots > npc_max_slots:
                 logging.info(
-                    "- %s. %d slots. Ratio %.4f. Total weight: %.4f. CAPPED. Should have gotten %d (WC:%d, Calculated: %d)  without cap",
+                    "- %s. %d slots. Ratio %.4f. Total weight: %.4f. "
+                    "CAPPED. Should have gotten %d (WC:%d, Calculated: %d)  without cap",
                     npc,
-                    npc_max_slots, weight_ratio, total_weight, npc_total_slots, npc_world_champ_slots, npc_calculated_slots)
+                    npc_max_slots, weight_ratio,
+                    total_weight,
+                    npc_total_slots,
+                    npc_world_champ_slots,
+                    npc_calculated_slots)
                 logging.info("  - All non-capped calculations will be repeated")
 
                 self._add_capped_slot(gender, npc, npc_max_slots, npc_world_champ_slots, slots)

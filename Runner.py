@@ -1,5 +1,6 @@
 import configparser
 import logging
+import argparse
 from Para_calculations import Logic, RankingsList, WorldChampionResultList, MALE, FEMALE
 
 
@@ -28,8 +29,8 @@ class ConfigFile:
         self.csv_separator = config['PARAMETERS']['csv_separator']
 
 
-def main():
-    logging.basicConfig(format='%(message)s', level=logging.DEBUG)
+def main(output_file):
+    logging.basicConfig(filename=output_file, format='%(message)s', level=logging.DEBUG)
     logging.info("Starting Para Slots process")
 
     config_file = ConfigFile()
@@ -46,7 +47,6 @@ def main():
 
     logic = Logic(get_ranking_list(rankings_csv_lines, config_file.csv_separator),
                   get_world_champion_results(world_champion_lines, config_file.csv_separator),
-                  world_champion_lines,
                   config_file.npc_max_number_of_males,
                   config_file.npc_max_number_of_females,
                   config_file.total_number_of_males,
@@ -81,4 +81,7 @@ def get_world_champion_results(world_champion_lines, csv_separator):
     return world_champion_result_list
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('output_file', nargs='?', default='output.txt')
+    args = parser.parse_args()
+    main(args.output_file)
