@@ -3,7 +3,6 @@ from Para_calculations import *
 __author__ = 'mannsi'
 
 import unittest
-import datetime
 
 number_of_event_fields = 15
 

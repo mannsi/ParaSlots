@@ -1,6 +1,8 @@
 import configparser
 import logging
 import argparse
+from datetime import datetime
+
 from Para_calculations import Logic, RankingsList, WorldChampionResultList, MALE, FEMALE
 
 
@@ -8,20 +10,23 @@ class ConfigFile:
     def __init__(self):
         self.rankings_file = ''
         self.world_champion_results_file = ''
-        self.minimum_requirements_file_path = ''
         self.npc_max_number_of_males = 0
         self.npc_max_number_of_females = 0
         self.total_number_of_males = 0
         self.total_number_of_females = 0
         self.csv_separator = ""
+        self.output_file_name = ""
+        self.name_of_run = ""
 
     def load_config_file(self, config_file_name):
         config = configparser.ConfigParser()
         config.read(config_file_name)
 
-        self.rankings_file = config['FILES']['rankings_file']
         self.world_champion_results_file = config['FILES']['world_champion_results_file']
+        self.rankings_file = config['FILES']['rankings_file']
 
+        self.output_file_name = config['PARAMETERS']['output_file_name']
+        self.name_of_run = config['PARAMETERS']['name_of_run']
         self.npc_max_number_of_males = int(config['PARAMETERS']['npc_max_number_of_males'])
         self.npc_max_number_of_females = int(config['PARAMETERS']['npc_max_number_of_females'])
         self.total_number_of_males = int(config['PARAMETERS']['total_number_of_males'])
@@ -30,11 +35,12 @@ class ConfigFile:
 
 
 def main(output_file):
-    logging.basicConfig(filename=output_file, filemode='w', format='%(message)s', level=logging.DEBUG)
-    logging.info("Starting Para Slots process")
-
     config_file = ConfigFile()
     config_file.load_config_file('config.ini')
+
+    logging.basicConfig(filename=output_file, filemode='w', format='%(message)s', level=logging.DEBUG)
+    logging.info(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+    logging.info("== %s ==", config_file.name_of_run)
 
     rankings_csv_lines = []
     world_champion_lines = []

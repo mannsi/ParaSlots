@@ -44,8 +44,9 @@ class Logic:
 
         male_wc_competitors = self._get_number_of_wc_competitors(MALE)
         female_we_competitors = self._get_number_of_wc_competitors(FEMALE)
+        logging.info("")
         logging.info(
-            "%d male and %d female world champion slots assigned before calculations."
+            "WORLD CHAMPION SLOTS: %d male and %d female assigned."
             % (male_wc_competitors, female_we_competitors))
 
         self._remaining_number_of_slots[MALE] = self._total_number_of_slots[MALE] - male_wc_competitors
@@ -54,12 +55,7 @@ class Logic:
         self._nullify_world_champion_swimmers()
 
     def calculate_npcs_numbers(self):
-        logging.info("")
-        logging.info("CALCULATING NPC MALE SLOTS")
         self._calculate_npc_by_gender(MALE)
-
-        logging.info("")
-        logging.info("CALCULATING NPC FEMALE SLOTS")
         self._calculate_npc_by_gender(FEMALE)
         return self._final_results
 
@@ -80,6 +76,8 @@ class Logic:
         self._remaining_number_of_slots[gender] -= (npc_max_slots - npc_world_champion_slots)
 
     def _calculate_npc_by_gender(self, gender):
+        logging.info("")
+        logging.info("CALCULATING NPC %s SLOTS", "MALE" if gender is MALE else "FEMALE")
         swimmers_and_weights = self._ranking_list.get_list_of_swimmers_and_max_weight()
         total_weight = sum([x[1] for x in swimmers_and_weights if x[0].gender == gender])
 
@@ -120,7 +118,6 @@ class Logic:
                     npc_calculated_slots)
 
                 logging.info("Calculations will be repeated due to capped result")
-                logging.info("")
 
                 self._add_capped_slot(gender, npc, npc_max_slots, npc_world_champ_slots, slots)
                 self._calculate_npc_by_gender(gender)  # Recursive call
@@ -306,6 +303,7 @@ class RankingsList:
         return dict_of_swimmers_and_weight.values()
 
     def load_csv_content(self, csv_lines, separator):
+        logging.info("")
         logging.info("Loading ranking lines")
         header_line_found = False
 
@@ -349,6 +347,7 @@ class WorldChampionResult:
 
     @staticmethod
     def from_csv_line(line, separator):
+
         split_line = line.split(separator)
 
         if len(split_line) != 7:
@@ -380,6 +379,7 @@ class WorldChampionResultList:
 
     def load_csv_content(self, csv_lines, csv_separator):
         """ Takes lines from the csv_lines and adds them to the results list, making sure no swimmer is added twice """
+        logging.info("")
         logging.info("Loading world champion results lines")
         for line in csv_lines:
             result = WorldChampionResult.from_csv_line(line, csv_separator)
