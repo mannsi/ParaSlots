@@ -1,6 +1,5 @@
 import configparser
 import logging
-import argparse
 from datetime import datetime
 
 from Para_calculations import Logic, RankingsList, WorldChampionResultList, MALE, FEMALE
@@ -34,11 +33,11 @@ class ConfigFile:
         self.csv_separator = config['PARAMETERS']['csv_separator']
 
 
-def main(output_file):
+def main():
     config_file = ConfigFile()
     config_file.load_config_file('config.ini')
 
-    logging.basicConfig(filename=output_file, filemode='w', format='%(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename=config_file.output_file_name, filemode='w', format='%(message)s', level=logging.DEBUG)
     logging.info(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
     logging.info("== %s ==", config_file.name_of_run)
 
@@ -89,7 +88,4 @@ def get_world_champion_results(world_champion_lines, csv_separator):
     return world_champion_result_list
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('output_file', nargs='?', default='output.txt')
-    args = parser.parse_args()
-    main(args.output_file)
+    main()
