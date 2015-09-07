@@ -23,9 +23,11 @@ class Logic:
                  npc_max_number_of_males,
                  npc_max_number_of_females,
                  total_number_of_males,
-                 total_number_of_females):
+                 total_number_of_females,
+                 number_of_decimals):
         self._world_champion_result_list = world_champion_result_list
         self._ranking_list = ranking_list
+        self._number_of_decimals = number_of_decimals
 
         self._npc_max_slots = {MALE: npc_max_number_of_males, FEMALE: npc_max_number_of_females}
         self._total_number_of_slots = {MALE: total_number_of_males, FEMALE: total_number_of_females}
@@ -101,14 +103,14 @@ class Logic:
             slots = Slots(npc, gender, weight_percentage=npc_total_slots, wc_slots=npc_world_champ_slots)
 
             if npc_total_slots <= int(npc_max_slots):
-                logging.info("- %s. %d slots\t(WC:%d, Calculated:%d)\tRatio %.4f\tTotal weight: %.4f",
+                logging.info("- %s. %d slots\t(WC:%d, Calculated:%d)\tRatio %." + self._number_of_decimals + "f\tTotal weight: %." + self._number_of_decimals + "f",
                              npc, int(npc_total_slots), npc_world_champ_slots, npc_calculated_slots, weight_ratio,
                              total_weight)
 
                 self._add_non_capped_slot(gender, npc, npc_calculated_slots, npc_total_slots, slots)
             elif npc_total_slots > npc_max_slots:
                 logging.info(
-                    "- %s. %d slots. Ratio %.4f. Total weight: %.4f. "
+                    "- %s. %d slots. Ratio %." + self._number_of_decimals + "f. Total weight: %." + self._number_of_decimals + "f. "
                     "Should have gotten %d (WC:%d, Calculated:%d). ",
                     npc,
                     npc_max_slots, weight_ratio,
@@ -158,14 +160,14 @@ class Logic:
                 # Skip over npcs that already have maximum number of slots
                 while self._npcs_non_capped_results[gender][npc] == self._npc_max_slots[gender]:
                     npc = sorted_rounded_npc_list.pop(0)
-                logging.info("-> %s gets 1 slot for its rounding value %.3f", npc, self._npcs_rounded_results[gender][npc])
+                logging.info("-> %s gets 1 slot for its rounding value %." + self._number_of_decimals + "f", npc, self._npcs_rounded_results[gender][npc])
 
                 self._npcs_non_capped_results[gender][npc].calculated_slots += 1
 
         logging.info("NPCs who don't receive a rounding slot")
         for npc in sorted_rounded_npc_list:
             rounding_value = self._npcs_rounded_results[gender][npc]
-            logging.info("-> %s - %.3f rounding value", npc, rounding_value)
+            logging.info("-> %s - %." + self._number_of_decimals + "f rounding value", npc, rounding_value)
 
     def _get_sorted_rounded_list(self, gender):
         """ Returns a list of npc sorted by the highest rounding values """

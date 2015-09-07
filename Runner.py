@@ -16,6 +16,7 @@ class ConfigFile:
         self.csv_separator = ""
         self.output_file_name = ""
         self.name_of_run = ""
+        self.number_of_decimals = 0
 
     def load_config_file(self, config_file_name):
         config = configparser.ConfigParser()
@@ -31,6 +32,7 @@ class ConfigFile:
         self.total_number_of_males = int(config['PARAMETERS']['total_number_of_males'])
         self.total_number_of_females = int(config['PARAMETERS']['total_number_of_females'])
         self.csv_separator = config['PARAMETERS']['csv_separator']
+        self.number_of_decimals = config['PARAMETERS']['number_of_decimals']
 
 
 def main():
@@ -55,7 +57,8 @@ def main():
                   config_file.npc_max_number_of_males,
                   config_file.npc_max_number_of_females,
                   config_file.total_number_of_males,
-                  config_file.total_number_of_females,)
+                  config_file.total_number_of_females,
+                  config_file.number_of_decimals)
 
     results = logic.calculate_npcs_numbers()
 
