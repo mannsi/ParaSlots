@@ -23,11 +23,9 @@ class Logic:
                  npc_max_number_of_males,
                  npc_max_number_of_females,
                  total_number_of_males,
-                 total_number_of_females,
-                 number_of_decimals):
+                 total_number_of_females):
         self._world_champion_result_list = world_champion_result_list
         self._ranking_list = ranking_list
-        self._number_of_decimals = number_of_decimals
 
         self._npc_max_slots = {MALE: npc_max_number_of_males, FEMALE: npc_max_number_of_females}
         self._total_number_of_slots = {MALE: total_number_of_males, FEMALE: total_number_of_females}
@@ -42,7 +40,7 @@ class Logic:
         self._npcs_rounded_results = {MALE: {}, FEMALE: {}}  # {gender: {npc: rounded_value}}
 
         self._final_results = []  # list of Slot objects
-        self._remaining_number_of_slots = {MALE: 0, FEMALE: 0}  # Total # of slots - WC slots - capped slots
+        self._remaining_number_of_non_wc_slots = {MALE: 0, FEMALE: 0}  # Total # of slots - WC slots - capped slots
 
         male_wc_competitors = self._get_number_of_wc_competitors(MALE)
         female_we_competitors = self._get_number_of_wc_competitors(FEMALE)
@@ -51,9 +49,8 @@ class Logic:
             "WORLD CHAMPION SLOTS: %d male and %d female assigned."
             % (male_wc_competitors, female_we_competitors))
 
-        self._remaining_number_of_slots[MALE] = self._total_number_of_slots[MALE] - male_wc_competitors
-        self._remaining_number_of_slots[FEMALE] = self._total_number_of_slots[FEMALE] - female_we_competitors
-
+        self._remaining_number_of_non_wc_slots[MALE] = self._total_number_of_slots[MALE] - male_wc_competitors
+        self._remaining_number_of_non_wc_slots[FEMALE] = self._total_number_of_slots[FEMALE] - female_we_competitors
         self._nullify_world_champion_swimmers()
 
     def calculate_npcs_numbers(self):
@@ -75,20 +72,26 @@ class Logic:
         slots.capped = True
         self._npcs_capped_results[gender][npc] = slots
         self._ranking_list.remove_entire_npc(npc, gender)
-        self._remaining_number_of_slots[gender] -= (npc_max_slots - npc_world_champion_slots)
+        self._remaining_number_of_non_wc_slots[gender] -= (npc_max_slots - npc_world_champion_slots)
 
-    def _calculate_npc_by_gender(self, gender):
+    def _calculate_npc_by_gender(self, gender, is_recursion=False):
         logging.info("")
-        logging.info("CALCULATING NPC %s SLOTS", "MALE" if gender is MALE else "FEMALE")
+        logging.info(f"CALCULATING NPC {'MALE' if gender is MALE else 'FEMALE'} SLOTS {'AGAIN' if is_recursion else ''}")
         swimmers_and_weights = self._ranking_list.get_list_of_swimmers_and_max_weight()
         total_weight = sum([x[1] for x in swimmers_and_weights if x[0].gender == gender])
 
         npcs = self._ranking_list.get_unique_npcs(gender)
         npc_max_slots = self._npc_max_slots[gender]
-        total_slots = self._remaining_number_of_slots[gender]
+        total_calculated_slots = self._remaining_number_of_non_wc_slots[gender]
         wc_results = self._world_champion_result_list.get_results()
 
-        logging.info("Total slots being assigned: %d" % (total_slots + self._get_number_of_wc_competitors(gender)))
+        total_slots = total_calculated_slots + self._get_number_of_wc_competitors(gender)
+        if not is_recursion:
+            logging.info(f"Total slots being assigned: {total_slots} ({total_calculated_slots} via weights and {self._get_number_of_wc_competitors(gender)} via WC qualifications)")
+        else:
+            logging.info(f"Weight slots being assigned: {total_calculated_slots}")
+
+        logging.info(f"DEBUG: Total weight for calculations is {total_weight:.6f}")
 
         if len(npcs) == 0:
             logging.warning("Strange, no NPC found in calculation step")
@@ -97,32 +100,26 @@ class Logic:
             npc_weight_sum = sum([x[1] for x in swimmers_and_weights if x[0].gender == gender and x[0].npc == npc])
             npc_world_champ_slots = sum([1 for x in wc_results if x.swimmer.gender == gender and x.swimmer.npc == npc])
             weight_ratio = npc_weight_sum / total_weight if total_weight > 0 else 0
-            npc_calculated_slots = total_slots * weight_ratio
+            npc_calculated_slots = total_calculated_slots * weight_ratio
             npc_total_slots = npc_calculated_slots + npc_world_champ_slots
 
             slots = Slots(npc, gender, weight_percentage=npc_total_slots, wc_slots=npc_world_champ_slots)
 
-            if npc_total_slots <= int(npc_max_slots):
-                logging.info("- %s. %d slots\t(WC:%d, Calculated:%d)\tRatio %." + self._number_of_decimals + "f\tTotal weight: %." + self._number_of_decimals + "f",
-                             npc, int(npc_total_slots), npc_world_champ_slots, npc_calculated_slots, weight_ratio,
-                             total_weight)
+            logging.info(
+                f"- {npc}. {int(npc_total_slots)} slots\t(WC:{npc_world_champ_slots}, Calculated:{int(npc_calculated_slots)})\tNPC weight: {npc_weight_sum:.1f} \tRatio {weight_ratio:.6f}")
 
+            if npc_total_slots <= int(npc_max_slots):
                 self._add_non_capped_slot(gender, npc, npc_calculated_slots, npc_total_slots, slots)
             elif npc_total_slots > npc_max_slots:
-                logging.info(
-                    "- %s. %d slots. Ratio %." + self._number_of_decimals + "f. Total weight: %." + self._number_of_decimals + "f. "
-                    "Should have gotten %d (WC:%d, Calculated:%d). ",
-                    npc,
-                    npc_max_slots, weight_ratio,
-                    total_weight,
-                    npc_total_slots,
-                    npc_world_champ_slots,
-                    npc_calculated_slots)
+                logging.info(f"{npc} exceeds the total maximum slots of {npc_max_slots}!")
 
-                logging.info("Calculations will be repeated due to capped result")
+                non_wc_slots_for_npc = npc_max_slots - npc_world_champ_slots
+                remaining_calculated_slots = total_calculated_slots - non_wc_slots_for_npc
+
+                logging.info(f"{npc} will receive {npc_max_slots} slots and their {non_wc_slots_for_npc} non-WC slots will be removed and the remaining {remaining_calculated_slots} slots redistributed among the rest of the NPCs")
 
                 self._add_capped_slot(gender, npc, npc_max_slots, npc_world_champ_slots, slots)
-                self._calculate_npc_by_gender(gender)  # Recursive call
+                self._calculate_npc_by_gender(gender, is_recursion=True)  # Recursive call
                 return
 
         self._add_rounding_slots(gender)
@@ -138,17 +135,15 @@ class Logic:
         Goes through the rounding list and assigns slots to the npcs with highest rounding values.
         Skips over npcs that already have achieved the capped number of slots
         """
-        num_non_capped_slots = sum([result.total_slots() for result in self._npcs_non_capped_results[gender].values()])
-        num_capped_slots = sum([capped_res.total_slots() for capped_res in self._npcs_capped_results[gender].values()])
-        num_assigned_slots = num_non_capped_slots + num_capped_slots
-        num_rounding_slots = self._total_number_of_slots[gender] - num_assigned_slots
+
+        num_calculated_slots = sum([result.calculated_slots for result in self._npcs_non_capped_results[gender].values()])
+        num_weight_slots = self._remaining_number_of_non_wc_slots[gender]
+        num_rounding_slots = num_weight_slots - num_calculated_slots
 
         logging.info("")
-        logging.info("ROUNDING")
-        logging.info("Gender: %s. Total slots:%d. Assigned slots:%d (Non-capped:%d. Capped: %d). "
-                     "Remaining slots for rounding: %d",
-                     "MALE" if gender is MALE else "FEMALE", self._total_number_of_slots[gender], num_assigned_slots,
-                     num_non_capped_slots, num_capped_slots, num_rounding_slots)
+        logging.info(f"ROUNDING {'MALE' if gender is MALE else 'FEMALE'}")
+
+        logging.info(f"{num_calculated_slots} slots assigned from weights out of {num_weight_slots} (excluding capped slots). Remaining {num_rounding_slots} rounds slots go to")
 
         if num_rounding_slots < 0:
             logging.error("Negative rounding value. Something went wrong with the calculations")
@@ -160,14 +155,14 @@ class Logic:
                 # Skip over npcs that already have maximum number of slots
                 while self._npcs_non_capped_results[gender][npc] == self._npc_max_slots[gender]:
                     npc = sorted_rounded_npc_list.pop(0)
-                logging.info("-> %s gets 1 slot for its rounding value %." + self._number_of_decimals + "f", npc, self._npcs_rounded_results[gender][npc])
+                logging.info("-> %s gets 1 slot for its rounding value %.6f", npc, self._npcs_rounded_results[gender][npc])
 
                 self._npcs_non_capped_results[gender][npc].calculated_slots += 1
 
         logging.info("NPCs who don't receive a rounding slot")
         for npc in sorted_rounded_npc_list:
             rounding_value = self._npcs_rounded_results[gender][npc]
-            logging.info("-> %s - %." + self._number_of_decimals + "f rounding value", npc, rounding_value)
+            logging.info("-> %s - %.6f rounding value", npc, rounding_value)
 
     def _get_sorted_rounded_list(self, gender):
         """ Returns a list of npc sorted by the highest rounding values """
@@ -191,94 +186,48 @@ class Logic:
 
 
 class Swimmer:
-    def __init__(self, swimmer_id, gender, npc, family_name=None, given_name=None, birth_year=None):
+    def __init__(self, swimmer_id, gender, npc):
         self.id = swimmer_id
-        self.family_name = family_name
-        self.given_name = given_name
         self.gender = gender
-        self.birth_year = birth_year
         self.npc = npc
 
 
 class Ranking:
     def __init__(self,
-                 event_code,
-                 event,
-                 swimmer_rank,
+                 rank,
                  swimmer,
-                 qualification,
-                 result_time=0,
-                 event_date=None,
-                 event_city=None,
-                 event_country=None):
-        self.event_code = event_code
-        self.event = event
-        self.rank = convert_rank(swimmer_rank)
+                 qualification):
+        self.rank = convert_rank(rank)
         self.swimmer = swimmer
-        self.result_time = result_time
-        self.result_time_ms = self._time_to_ms(result_time)
-        self.event_date = event_date
-        self.event_city = event_city
-        self.event_country = event_country
-        self.minimum_requirement_time = datetime.timedelta()
         self.qualification = qualification
-        self.weight = 0
-
-        self._set_weight()
+        self.weight = self._set_weight(self.rank)
 
     @staticmethod
-    def from_csv_line(line, separator):
+    def from_csv_line(line, separator, swimmer_id_index, gender_index, npc_index, rank_index, qualification_index):
         split_line = line.split(separator)
 
-        if len(split_line) != 15:
-            raise Exception("Illegal ranking csv line: '" + line + "'")
-
-        swimmer_id = split_line[4].strip()
+        swimmer_id = split_line[swimmer_id_index].strip()
         if not swimmer_id:
             return None
 
         swimmer = Swimmer(swimmer_id,
-                          family_name=split_line[5].strip(),
-                          given_name=split_line[6].strip(),
-                          gender=split_line[1].strip(),
-                          birth_year=split_line[8].strip(),
-                          npc=split_line[7].strip())
+                          gender=split_line[gender_index].strip(),
+                          npc=split_line[npc_index].strip())
+        rank = split_line[rank_index].strip()
+        qualification = split_line[qualification_index].strip()
 
-        return Ranking(
-            event_code=split_line[0].strip(),
-            swimmer=swimmer,
-            event=split_line[2].strip(),
-            swimmer_rank=split_line[3].strip(),
-            result_time=split_line[9].strip(),
-            qualification=split_line[11].strip(),
-            event_date=split_line[12].strip(),
-            event_city=split_line[13].strip(),
-            event_country=split_line[14].strip()
-        )
-
-    def _set_weight(self):
-        if 1 <= self.rank <= 8:
-            self.weight = 1
-        elif 9 <= self.rank <= 12:
-            self.weight = 0.8
-        elif 13 <= self.rank <= 16:
-            self.weight = 0.6
-        elif 17 <= self.rank:
-            self.weight = 0.5
+        return Ranking(rank, swimmer, qualification)
 
     @staticmethod
-    def _time_to_ms(time_string):
-        if not time_string:
-            return 0
-
-        split_time_string = time_string.replace(".", ":").split(":")
-
-        if not len(split_time_string) == 3:
-            raise Exception("Illegal time string: " + time_string)
-
-        (mins, secs, ms) = split_time_string
-        return int(
-            datetime.timedelta(minutes=int(mins), seconds=int(secs), milliseconds=int(ms)).total_seconds() * 1000)
+    def _set_weight(rank):
+        if 1 <= rank <= 8:
+            return 1
+        elif 9 <= rank <= 12:
+            return 0.8
+        elif 13 <= rank <= 16:
+            return 0.6
+        elif 17 <= rank:
+            return 0.5
 
 
 class RankingsList:
@@ -304,20 +253,20 @@ class RankingsList:
 
         return dict_of_swimmers_and_weight.values()
 
-    def load_csv_content(self, csv_lines, separator):
+    def load_csv_content(self, csv_lines, separator, swimmer_id_index, gender_index, npc_index, rank_index, ranking_qualification_index):
         logging.info("")
         logging.info("Loading ranking lines")
         header_line_found = False
 
         for line in csv_lines:
             if header_line_found:
-                self._add_csv_line(line, separator)
+                self._add_csv_line(line, separator, swimmer_id_index, gender_index, npc_index, rank_index, ranking_qualification_index)
             elif line.startswith("Event Code"):
                 header_line_found = True
         logging.info("=> %d event lines loaded" % len(self._rankings))
 
-    def _add_csv_line(self, line, separator):
-        event_result = Ranking.from_csv_line(line, separator)
+    def _add_csv_line(self, line, separator, swimmer_id_index, gender_index, npc_index, rank_index, ranking_qualification_index):
+        event_result = Ranking.from_csv_line(line, separator, swimmer_id_index, gender_index, npc_index, rank_index, ranking_qualification_index)
         if not event_result or not event_result.swimmer.id:
             return
         if event_result.qualification in ("MQS", ""):
@@ -337,54 +286,37 @@ class RankingsList:
 
 
 class WorldChampionResult:
-    def __init__(self,
-                 swimmer,
-                 event,
-                 event_code,
-                 rank):
+    def __init__(self, swimmer):
         self.swimmer = swimmer
-        self.event = event
-        self.event_code = event_code
-        self.rank = rank
 
     @staticmethod
-    def from_csv_line(line, separator):
+    def from_csv_line(line, separator, swimmer_id_index, gender_index, npc_index):
 
         split_line = line.split(separator)
 
-        if len(split_line) != 7:
-            raise Exception("Illegal world champion csv line: '%s'" % line)
-
-        swimmer_id = split_line[5].strip()
+        swimmer_id = split_line[swimmer_id_index].strip()
         if not swimmer_id:
             logging.info("Removing world champion line since it had no swimmer id. Line: %s" % line)
             return None
 
-        swimmer = Swimmer(swimmer_id,
-                          family_name=split_line[2].strip(),
-                          given_name=split_line[3].strip(),
-                          gender=MALE if split_line[0].strip().startswith('Me') else FEMALE,
-                          birth_year="",
-                          npc=split_line[1].strip())
+        gender = MALE if split_line[gender_index].strip().startswith('Me') else FEMALE
+        npc = split_line[npc_index].strip()
 
-        return WorldChampionResult(
-            event_code=split_line[6].strip(),
-            swimmer=swimmer,
-            event=split_line[0].strip(),
-            rank=convert_rank(split_line[4].strip())
-        )
+        swimmer = Swimmer(swimmer_id, gender, npc)
+
+        return WorldChampionResult(swimmer=swimmer)
 
 
 class WorldChampionResultList:
     def __init__(self):
         self.results = []
 
-    def load_csv_content(self, csv_lines, csv_separator):
+    def load_csv_content(self, csv_lines, separator, swimmer_id_index, gender_index, npc_index):
         """ Takes lines from the csv_lines and adds them to the results list, making sure no swimmer is added twice """
         logging.info("")
         logging.info("Loading world champion results lines")
         for line in csv_lines:
-            result = WorldChampionResult.from_csv_line(line, csv_separator)
+            result = WorldChampionResult.from_csv_line(line, separator, swimmer_id_index, gender_index, npc_index)
             if not self._swimmer_already_included_in_list(result.swimmer.id):
                 self.results.append(result)
 
